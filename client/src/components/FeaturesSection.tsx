@@ -1,6 +1,8 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
+import { motion, useInView } from "framer-motion";
+import { useRef } from "react";
 import { Brain, BookOpen, Users, Calendar, TrendingUp, Palette } from "lucide-react";
 
 const features = [
@@ -55,10 +57,18 @@ const features = [
 ];
 
 export function FeaturesSection() {
+  const sectionRef = useRef(null);
+  const isInView = useInView(sectionRef, { once: true, margin: "-100px" });
+
   return (
-    <section className="w-full py-20 md:py-32 bg-gradient-to-b from-background to-secondary/20">
+    <section ref={sectionRef} className="w-full py-20 md:py-32 bg-gradient-to-b from-background to-secondary/20">
       <div className="container mx-auto px-4">
-        <div className="text-center mb-16 space-y-4 animate-fade-in-up">
+        <motion.div 
+          className="text-center mb-16 space-y-4"
+          initial={{ opacity: 0, y: 30 }}
+          animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 30 }}
+          transition={{ duration: 0.6 }}
+        >
           <Badge variant="secondary" className="mb-2">Platform Features</Badge>
           <h2 className="font-accent text-3xl md:text-4xl lg:text-5xl font-bold" data-testid="text-features-title">
             Everything You Need for Mental Wellness
@@ -66,35 +76,47 @@ export function FeaturesSection() {
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
             A comprehensive toolkit designed specifically for college students' mental health needs.
           </p>
-        </div>
+        </motion.div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           {features.map((feature, index) => {
             const Icon = feature.icon;
+            const cardRef = useRef(null);
+            const cardInView = useInView(cardRef, { once: true, margin: "-50px" });
+            
             return (
-              <Card
+              <motion.div
                 key={index}
-                className="group hover-elevate transition-all duration-300 hover:shadow-xl border-2 hover:border-primary/30 animate-fade-in-up"
-                style={{ animationDelay: `${index * 0.1}s` }}
-                data-testid={`card-feature-${index + 1}`}
+                ref={cardRef}
+                initial={{ opacity: 0, y: 50, scale: 0.9 }}
+                animate={cardInView ? { opacity: 1, y: 0, scale: 1 } : { opacity: 0, y: 50, scale: 0.9 }}
+                transition={{ duration: 0.5, delay: index * 0.1 }}
               >
-                <CardContent className="pt-8 pb-6 space-y-4">
-                  <div className={`h-16 w-16 rounded-2xl bg-gradient-to-br ${feature.gradient} flex items-center justify-center mb-4 group-hover:scale-110 transition-transform shadow-lg`}>
-                    <Icon className="h-8 w-8 text-white" />
-                  </div>
-                  <h3 className="font-accent text-xl font-semibold" data-testid={`text-feature-title-${index + 1}`}>
-                    {feature.title}
-                  </h3>
-                  <p className="text-muted-foreground leading-relaxed" data-testid={`text-feature-description-${index + 1}`}>
-                    {feature.description}
-                  </p>
-                  <Link href={feature.link}>
-                    <Button variant="ghost" className="w-full group-hover:text-primary transition-all hover:scale-105" data-testid={`button-${feature.action.toLowerCase().replace(/\s+/g, '-')}`}>
-                      {feature.action} →
-                    </Button>
-                  </Link>
-                </CardContent>
-              </Card>
+                <Card
+                  className="group hover-elevate transition-all duration-300 hover:shadow-xl border-2 hover:border-primary/30 h-full"
+                  data-testid={`card-feature-${index + 1}`}
+                >
+                  <CardContent className="pt-8 pb-6 space-y-4">
+                    <motion.div 
+                      className={`h-16 w-16 rounded-2xl bg-gradient-to-br ${feature.gradient} flex items-center justify-center mb-4 group-hover:scale-110 transition-transform shadow-lg`}
+                      whileHover={{ rotate: [0, -5, 5, -5, 0], transition: { duration: 0.5 } }}
+                    >
+                      <Icon className="h-8 w-8 text-white" />
+                    </motion.div>
+                    <h3 className="font-accent text-xl font-semibold" data-testid={`text-feature-title-${index + 1}`}>
+                      {feature.title}
+                    </h3>
+                    <p className="text-muted-foreground leading-relaxed" data-testid={`text-feature-description-${index + 1}`}>
+                      {feature.description}
+                    </p>
+                    <Link href={feature.link}>
+                      <Button variant="ghost" className="w-full group-hover:text-primary transition-all hover:scale-105" data-testid={`button-${feature.action.toLowerCase().replace(/\s+/g, '-')}`}>
+                        {feature.action} →
+                      </Button>
+                    </Link>
+                  </CardContent>
+                </Card>
+              </motion.div>
             );
           })}
         </div>

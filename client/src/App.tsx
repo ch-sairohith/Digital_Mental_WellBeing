@@ -42,6 +42,8 @@ import TherapistProfile from "@/pages/TherapistProfile";
 
 import Payment from "@/pages/payment";
 import NotFound from "@/pages/not-found";
+import ProfilePage from "@/pages/ProfilePage";
+import SettingsPage from "@/pages/SettingsPage";
 
 import AppSidebar from "@/Inst/components/AppSidebar";
 import { SidebarProvider, SidebarTrigger } from "@/Inst/components/ui/sidebar";
@@ -105,6 +107,10 @@ function UserRouter() {
       <Route path="/counselors/results" component={QuestionnaireResults} />
       <Route path="/counselors/all" component={TherapistList} />
       <Route path="/counselors/profile/:id" component={TherapistProfile} />
+
+      {/* Profile & Settings */}
+      <Route path="/profile" component={ProfilePage} />
+      <Route path="/settings" component={SettingsPage} />
 
       <Route component={NotFound} />
     </Switch>

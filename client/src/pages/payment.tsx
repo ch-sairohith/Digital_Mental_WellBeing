@@ -8,12 +8,23 @@ import { CreditCard, Calendar, Clock, Video, User, CheckCircle2, Loader2 } from 
 import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
 import { motion } from "framer-motion";
+import { auth } from "@/lib/firebase";
+import { saveBooking } from "@/lib/db";
+import { useToast } from "@/hooks/use-toast";
 
 export default function Payment() {
+  // All hooks must be called unconditionally at the top level
   const [bookingDetails, setBookingDetails] = useState<any>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [isConfirmed, setIsConfirmed] = useState(false);
+  const [user, setUser] = useState(auth.currentUser);
   const [, setLocation] = useLocation();
+  const { toast } = useToast();
+
+  useEffect(() => {
+    const unsub = auth.onAuthStateChanged((u) => setUser(u));
+    return () => unsub();
+  }, []);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -25,18 +36,71 @@ export default function Payment() {
       time: params.get("time"),
       duration: params.get("duration"),
       price: params.get("price"),
+      counsellorId: params.get("counsellorId") ? parseInt(params.get("counsellorId")!) : undefined,
     };
     setBookingDetails(data);
   }, []);
 
-  const handlePayment = () => {
+  const handlePayment = async () => {
+    if (!user) {
+      toast({
+        title: "Authentication Required",
+        description: "Please login to confirm your booking.",
+        variant: "destructive",
+      });
+      setLocation("/login");
+      return;
+    }
+
+    if (!bookingDetails) {
+      toast({
+        title: "Error",
+        description: "Booking details are missing. Please try again.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsProcessing(true);
-    setTimeout(() => {
+
+    try {
+      // Save booking to Firebase
+      const bookingData = {
+        userId: user.uid,
+        userEmail: user.email || "",
+        userName: user.displayName || user.email?.split("@")[0] || "User",
+        counsellorId: bookingDetails.counsellorId ? parseInt(bookingDetails.counsellorId.toString()) : undefined,
+        counsellorName: bookingDetails.counsellor,
+        specialization: bookingDetails.specialization,
+        sessionType: bookingDetails.sessionType as "video" | "in-person",
+        date: bookingDetails.date,
+        time: bookingDetails.time,
+        duration: bookingDetails.duration,
+        price: bookingDetails.price,
+        status: "confirmed" as const,
+      };
+
+      await saveBooking(bookingData);
+
       setIsProcessing(false);
       setIsConfirmed(true);
-      // Auto redirect to confirmation/dashboard after delay
-      setTimeout(() => setLocation("/counselors/all"), 3500);
-    }, 2000);
+      
+      toast({
+        title: "Booking Confirmed!",
+        description: "Your counselling session has been successfully scheduled.",
+      });
+
+      // Auto redirect to dashboard after delay
+      setTimeout(() => setLocation("/dashboard"), 3500);
+    } catch (error) {
+      console.error("Error saving booking:", error);
+      setIsProcessing(false);
+      toast({
+        title: "Error",
+        description: "Failed to save booking. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   return (

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { ChatBot } from "@/components/ChatBot";
@@ -29,6 +29,7 @@ import {
 } from "recharts";
 import { Link, useLocation } from "wouter";
 import { MoodScanner } from "@/components/MoodScanner";
+import { motion, useInView } from "framer-motion";
 
 const moodData = [
   { day: "Mon", mood: 7, sleep: 6 },
@@ -101,31 +102,69 @@ export default function Dashboard() {
         {/* 🌅 Hero Section */}
         <section className="relative w-full py-16 bg-gradient-to-br from-primary/10 via-background to-secondary/20">
           <div className="container mx-auto px-4">
-            <div className="max-w-3xl mx-auto space-y-6 animate-fade-in-up">
+            <motion.div 
+              className="max-w-3xl mx-auto space-y-6"
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6 }}
+            >
               <div className="flex items-center justify-between">
                 <div className="flex-1 text-center">
-                  <Badge variant="secondary" className="mb-2 mx-auto">
-                    Dashboard
-                  </Badge>
-                  <h1
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ duration: 0.5, delay: 0.2 }}
+                  >
+                    <Badge variant="secondary" className="mb-2 mx-auto">
+                      Dashboard
+                    </Badge>
+                  </motion.div>
+                  <motion.h1
                     className="font-accent text-4xl md:text-5xl font-bold mb-2"
                     data-testid="text-dashboard-welcome"
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.6, delay: 0.3 }}
                   >
                     Welcome back!
-                  </h1>
-                  <p className="text-lg text-muted-foreground">
-                    Here’s an overview of your mental wellness journey 🌱
-                  </p>
+                  </motion.h1>
+                  <motion.p 
+                    className="text-lg text-muted-foreground"
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.6, delay: 0.4 }}
+                  >
+                    Here's an overview of your mental wellness journey 🌱
+                  </motion.p>
                 </div>
-                <PanicButton />
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ duration: 0.5, delay: 0.5 }}
+                >
+                  <PanicButton />
+                </motion.div>
               </div>
-            </div>
+            </motion.div>
           </div>
         </section>
+        <motion.div 
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.6 }}
+        >
+          <MoodScanner />
+        </motion.div>
 
         {/* 🧩 Stats Section */}
         <section className="container mx-auto px-4 py-12">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          <motion.div 
+            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8"
+            initial={{ opacity: 0 }}
+            whileInView={{ opacity: 1 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6 }}
+          >
             <DashboardStat
               icon={<TrendingUp className="h-6 w-6 text-white" />}
               gradient="from-green-500 to-emerald-600"
@@ -145,8 +184,8 @@ export default function Dashboard() {
             <DashboardStat
               icon={<Moon className="h-6 w-6 text-white" />}
               gradient="from-purple-500 to-pink-600"
-              label="Sleep per night"
-              value="7 hours"
+              label="Reccommendations"
+              value="good sleep"
               badge="Average"
               onClick={() => setLocation("/analytics/sleep")}
             />
@@ -158,7 +197,7 @@ export default function Dashboard() {
               badge="Total"
               onClick={() => setLocation("/booking")}
             />
-          </div>
+          </motion.div>
 
           {/* 📈 Charts + Sessions */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
@@ -198,71 +237,6 @@ export default function Dashboard() {
             </Card>
 
             {/* 🧘 Upcoming Sessions */}
-            <Card className="border-2 animate-fade-in-up" style={{ animationDelay: "0.25s" }}>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 font-accent text-xl">
-                  <Calendar className="h-5 w-5 text-primary" />
-                  Upcoming Sessions
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {upcomingSessions.map((session) => (
-                  <div
-                    key={session.id}
-                    className="p-4 rounded-xl bg-secondary/50 hover-elevate transition-all"
-                  >
-                    <h4 className="font-semibold mb-1">{session.counsellor}</h4>
-                    <p className="text-sm text-muted-foreground mb-2">
-                      {session.date} at {session.time}
-                    </p>
-                    <Badge variant="outline" className="text-xs">
-                      {session.type}
-                    </Badge>
-                  </div>
-                ))}
-                <Button
-                  variant="outline"
-                  onClick={() => setLocation("/booking")}
-                  className="w-full transition-all hover:scale-105"
-                >
-                  Book New Session
-                </Button>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* 🌙 Sleep Chart + Recent Activity */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
-            <Card className="lg:col-span-2 border-2 animate-fade-in-up">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 font-accent text-2xl">
-                  <Moon className="h-5 w-5 text-primary" />
-                  Sleep Patterns
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <ResponsiveContainer width="100%" height={250}>
-                  <BarChart data={moodData}>
-                    <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                    <XAxis dataKey="day" />
-                    <YAxis domain={[0, 10]} />
-                    <Tooltip
-                      contentStyle={{
-                        backgroundColor: "hsl(var(--card))",
-                        border: "1px solid hsl(var(--border))",
-                        borderRadius: "8px",
-                      }}
-                    />
-                    <Bar
-                      dataKey="sleep"
-                      fill="hsl(var(--primary))"
-                      radius={[8, 8, 0, 0]}
-                    />
-                  </BarChart>
-                </ResponsiveContainer>
-              </CardContent>
-            </Card>
-
             <Card className="border-2 animate-fade-in-up">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 font-accent text-xl">
@@ -289,10 +263,8 @@ export default function Dashboard() {
             </Card>
           </div>
 
+          {/* 🌙 Sleep Chart + Recent Activity */}
           {/* 📸 Mood Scanner Integration */}
-          <div className="animate-fade-in-up" style={{ animationDelay: "0.4s" }}>
-            <MoodScanner />
-          </div>
         </section>
       </main>
 

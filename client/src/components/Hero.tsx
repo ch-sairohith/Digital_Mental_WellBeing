@@ -2,6 +2,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Check, MessageCircle, ArrowRight } from "lucide-react";
 import { Link } from "wouter";
+import { motion } from "framer-motion";
 import heroImage from "@assets/generated_images/Hero_supportive_students_illustration_d02ef8d9.png";
 
 export function Hero() {
@@ -11,20 +12,41 @@ export function Hero() {
       
       <div className="container mx-auto px-4">
         <div className="grid lg:grid-cols-2 gap-12 items-center">
-          <div className="space-y-8 animate-fade-in-up">
-            <Badge variant="secondary" className="mb-2 border border-primary/20" data-testid="badge-tagline">
-              🌱 Mental Health Support
-            </Badge>
-            <div className="space-y-4">
+          <motion.div 
+            className="space-y-8"
+            initial={{ opacity: 0, x: -50 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.8 }}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.5, delay: 0.2 }}
+            >
+              <Badge variant="secondary" className="mb-2 border border-primary/20" data-testid="badge-tagline">
+                🌱 Mental Health Support
+              </Badge>
+            </motion.div>
+            <motion.div 
+              className="space-y-4"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.3 }}
+            >
               <h1 className="font-accent text-5xl md:text-6xl lg:text-7xl font-bold leading-tight bg-gradient-to-r from-accent to-primary bg-clip-text text-transparent" data-testid="text-hero-title">
                 Your Mental Health, Our Priority
               </h1>
               <p className="text-lg md:text-xl text-muted-foreground max-w-2xl leading-relaxed" data-testid="text-hero-subtitle">
                 AI-guided help, just when you need it. Anonymous. Secure. Stigma-free.
               </p>
-            </div>
+            </motion.div>
 
-            <div className="flex flex-col sm:flex-row gap-4">
+            <motion.div 
+              className="flex flex-col sm:flex-row gap-4"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.5 }}
+            >
               <Link href="/chat">
                 <Button size="lg" className="rounded-full text-base transition-all hover:scale-105 shadow-lg" data-testid="button-start-chat">
                   <MessageCircle className="mr-2 h-5 w-5" />
@@ -37,39 +59,47 @@ export function Hero() {
                   <ArrowRight className="ml-2 h-5 w-5" />
                 </Button>
               </Link>
-            </div>
+            </motion.div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-4">
-              <div className="flex items-center gap-2">
-                <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
-                  <Check className="h-5 w-5 text-primary" />
-                </div>
-                <span className="text-sm font-medium">100% Confidential</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
-                  <Check className="h-5 w-5 text-primary" />
-                </div>
-                <span className="text-sm font-medium">Available 24/7</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
-                  <Check className="h-5 w-5 text-primary" />
-                </div>
-                <span className="text-sm font-medium">Expert-Backed</span>
-              </div>
-            </div>
-          </div>
+            <motion.div 
+              className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-4"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.7 }}
+            >
+              {["100% Confidential", "Available 24/7", "Expert-Backed"].map((text, i) => (
+                <motion.div 
+                  key={i}
+                  className="flex items-center gap-2"
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ duration: 0.4, delay: 0.8 + i * 0.1 }}
+                >
+                  <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
+                    <Check className="h-5 w-5 text-primary" />
+                  </div>
+                  <span className="text-sm font-medium">{text}</span>
+                </motion.div>
+              ))}
+            </motion.div>
+          </motion.div>
 
-          <div className="relative animate-fade-in-up" style={{ animationDelay: "0.2s" }}>
+          <motion.div 
+            className="relative"
+            initial={{ opacity: 0, x: 50, scale: 0.9 }}
+            animate={{ opacity: 1, x: 0, scale: 1 }}
+            transition={{ duration: 0.8, delay: 0.3 }}
+          >
             <div className="absolute inset-0 bg-gradient-to-tr from-primary/20 to-transparent rounded-3xl blur-3xl -z-10" />
-            <img
+            <motion.img
               src={heroImage}
               alt="Diverse students supporting each other in a warm, inclusive environment"
               className="w-full h-auto rounded-3xl shadow-2xl"
               data-testid="img-hero"
+              whileHover={{ scale: 1.02 }}
+              transition={{ duration: 0.3 }}
             />
-          </div>
+          </motion.div>
         </div>
       </div>
     </section>

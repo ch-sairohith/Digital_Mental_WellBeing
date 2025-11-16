@@ -15,9 +15,14 @@ import {
   Play,
   Download,
   Share2,
-  Bookmark
+  Bookmark,
+  Check
 } from "lucide-react";
 import { motion } from "framer-motion";
+import { useState, useEffect } from "react";
+import { auth, db } from "@/lib/firebase";
+import { doc, getDoc, setDoc, updateDoc } from "firebase/firestore";
+import { useToast } from "@/hooks/use-toast";
 
 // Resource data - matching the structure from Resources.tsx
 const resources = [
@@ -369,6 +374,183 @@ export default function ResourceView() {
   const [, params] = useRoute("/resources/:id");
   const resourceId = params?.id ? parseInt(params.id, 10) : undefined;
   const resource = resourceId ? resources.find(r => r.id === resourceId) : undefined;
+  const { toast } = useToast();
+  const [isSaved, setIsSaved] = useState(false);
+  const user = auth.currentUser;
+
+  useEffect(() => {
+    const checkSaved = async () => {
+      if (!user || !resource) return;
+      try {
+        const userDoc = await getDoc(doc(db, "users", user.uid));
+        const savedResources = userDoc.data()?.savedResources || [];
+        setIsSaved(savedResources.includes(resource.id));
+      } catch (error) {
+        console.error("Error checking saved status:", error);
+      }
+    };
+    checkSaved();
+  }, [user, resource]);
+
+  const handleSaveForLater = async () => {
+    if (!user || !resource) {
+      toast({
+        title: "Please login",
+        description: "You need to be logged in to save resources.",
+        variant: "destructive",
+      });
+      return;
+    }
+    try {
+      const userDoc = await getDoc(doc(db, "users", user.uid));
+      const savedResources = userDoc.data()?.savedResources || [];
+      if (isSaved) {
+        const updated = savedResources.filter((id: number) => id !== resource.id);
+        await updateDoc(doc(db, "users", user.uid), { savedResources: updated });
+        setIsSaved(false);
+        toast({
+          title: "Removed",
+          description: "Resource removed from saved items.",
+        });
+      } else {
+        await updateDoc(doc(db, "users", user.uid), { 
+          savedResources: [...savedResources, resource.id] 
+        });
+        setIsSaved(true);
+        toast({
+          title: "Saved",
+          description: "Resource saved for later!",
+        });
+      }
+    } catch (error) {
+      console.error("Error saving resource:", error);
+      toast({
+        title: "Error",
+        description: "Failed to save resource. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleShare = async () => {
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: resource?.title,
+          text: resource?.description,
+          url: window.location.href,
+        });
+        toast({
+          title: "Shared",
+          description: "Resource shared successfully!",
+        });
+      } catch (error: any) {
+        if (error.name !== "AbortError") {
+          // Fallback to clipboard
+          handleCopyLink();
+        }
+      }
+    } else {
+      handleCopyLink();
+    }
+  };
+
+  const handleCopyLink = () => {
+    navigator.clipboard.writeText(window.location.href);
+    toast({
+      title: "Link copied",
+      description: "Resource link copied to clipboard!",
+    });
+  };
+
+  const handleDownloadPDF = async () => {
+    if (!resource) return;
+    
+    try {
+      // Create a simple text-based PDF using browser print
+      const printWindow = window.open("", "_blank");
+      if (!printWindow) {
+        toast({
+          title: "Error",
+          description: "Please allow popups to download PDF.",
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      // Format content with better styling
+      const formattedContent = resource.content
+        .split('\n')
+        .map((para: string) => {
+          if (para.trim().startsWith('##')) {
+            return `<h2 style="color: #4ade80; margin-top: 30px; margin-bottom: 15px; font-size: 1.5em;">${para.replace('##', '').trim()}</h2>`;
+          }
+          if (para.trim().startsWith('###')) {
+            return `<h3 style="color: #16a34a; margin-top: 20px; margin-bottom: 10px; font-size: 1.2em;">${para.replace('###', '').trim()}</h3>`;
+          }
+          if (para.trim().startsWith('-')) {
+            return `<li style="margin: 8px 0; margin-left: 20px;">${para.replace('-', '').trim()}</li>`;
+          }
+          if (para.trim().startsWith('**') && para.trim().endsWith('**')) {
+            return `<p style="font-weight: bold; margin: 15px 0;">${para.replace(/\*\*/g, '').trim()}</p>`;
+          }
+          if (para.trim()) {
+            return `<p style="margin: 12px 0;">${para.trim()}</p>`;
+          }
+          return '';
+        })
+        .filter(p => p)
+        .join('');
+      
+      printWindow.document.write(`
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <title>${resource.title}</title>
+            <style>
+              body { font-family: 'Segoe UI', Arial, sans-serif; padding: 40px; line-height: 1.8; max-width: 800px; margin: 0 auto; }
+              h1 { color: #333; border-bottom: 3px solid #4ade80; padding-bottom: 15px; margin-bottom: 20px; }
+              .meta { background: #f0fdf4; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #4ade80; }
+              .meta p { margin: 8px 0; }
+              .content { margin-top: 30px; }
+              ul { list-style: none; padding-left: 0; }
+              @media print {
+                body { padding: 20px; }
+              }
+            </style>
+          </head>
+          <body>
+            <h1>${resource.title}</h1>
+            <div class="meta">
+              <p><strong>Author:</strong> ${resource.author}</p>
+              <p><strong>Published:</strong> ${resource.publishedDate}</p>
+              <p><strong>Category:</strong> ${resource.category}</p>
+              <p><strong>Duration:</strong> ${resource.duration}</p>
+            </div>
+            <div class="content">
+              ${formattedContent}
+            </div>
+          </body>
+        </html>
+      `);
+      
+      printWindow.document.close();
+      setTimeout(() => {
+        printWindow.print();
+        toast({
+          title: "PDF Ready",
+          description: "Use your browser's print dialog to save as PDF.",
+        });
+      }, 250);
+    } catch (error) {
+      console.error("Error generating PDF:", error);
+      toast({
+        title: "Error",
+        description: "Failed to generate PDF. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
 
   if (!resource) {
     return (
@@ -452,40 +634,74 @@ export default function ResourceView() {
                 </div>
               </div>
 
-              <div className="flex flex-wrap gap-3 pt-4">
-                <Button className="rounded-full">
-                  {resource.type === "Video" ? (
-                    <>
-                      <Play className="w-4 h-4 mr-2" />
-                      Watch Now
-                    </>
-                  ) : resource.type === "Audio" ? (
-                    <>
-                      <Headphones className="w-4 h-4 mr-2" />
-                      Listen Now
-                    </>
-                  ) : (
-                    <>
-                      <BookOpen className="w-4 h-4 mr-2" />
-                      Read Article
-                    </>
-                  )}
-                </Button>
-                <Button variant="outline" className="rounded-full">
-                  <Bookmark className="w-4 h-4 mr-2" />
-                  Save for Later
-                </Button>
-                <Button variant="outline" className="rounded-full">
-                  <Share2 className="w-4 h-4 mr-2" />
-                  Share
-                </Button>
-                {resource.type === "Article" && (
-                  <Button variant="outline" className="rounded-full">
-                    <Download className="w-4 h-4 mr-2" />
-                    Download PDF
+              <motion.div 
+                className="flex flex-wrap gap-3 pt-4"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: 0.4 }}
+              >
+                <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                  <Button className="rounded-full">
+                    {resource.type === "Video" ? (
+                      <>
+                        <Play className="w-4 h-4 mr-2" />
+                        Watch Now
+                      </>
+                    ) : resource.type === "Audio" ? (
+                      <>
+                        <Headphones className="w-4 h-4 mr-2" />
+                        Listen Now
+                      </>
+                    ) : (
+                      <>
+                        <BookOpen className="w-4 h-4 mr-2" />
+                        Read Article
+                      </>
+                    )}
                   </Button>
+                </motion.div>
+                <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                  <Button 
+                    variant={isSaved ? "default" : "outline"} 
+                    className="rounded-full"
+                    onClick={handleSaveForLater}
+                  >
+                    {isSaved ? (
+                      <>
+                        <Check className="w-4 h-4 mr-2" />
+                        Saved
+                      </>
+                    ) : (
+                      <>
+                        <Bookmark className="w-4 h-4 mr-2" />
+                        Save for Later
+                      </>
+                    )}
+                  </Button>
+                </motion.div>
+                <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                  <Button 
+                    variant="outline" 
+                    className="rounded-full"
+                    onClick={handleShare}
+                  >
+                    <Share2 className="w-4 h-4 mr-2" />
+                    Share
+                  </Button>
+                </motion.div>
+                {resource.type === "Article" && (
+                  <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                    <Button 
+                      variant="outline" 
+                      className="rounded-full"
+                      onClick={handleDownloadPDF}
+                    >
+                      <Download className="w-4 h-4 mr-2" />
+                      Download PDF
+                    </Button>
+                  </motion.div>
                 )}
-              </div>
+              </motion.div>
             </motion.div>
           </div>
         </section>
@@ -497,10 +713,83 @@ export default function ResourceView() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.2 }}
           >
-            <Card className="p-8 md:p-12 shadow-lg border-2">
+            <Card className="p-8 md:p-12 shadow-lg border-2 hover:shadow-2xl transition-all duration-300">
               <div className="prose prose-lg dark:prose-invert max-w-none">
-                <div className="whitespace-pre-line text-muted-foreground leading-relaxed">
-                  {resource.content}
+                <div className="text-muted-foreground leading-relaxed space-y-4">
+                  {resource.content.split('\n').map((para, index) => {
+                    if (para.trim().startsWith('##')) {
+                      return (
+                        <motion.h2
+                          key={index}
+                          className="text-2xl font-bold text-foreground mt-8 mb-4 pb-2 border-b-2 border-primary/20"
+                          initial={{ opacity: 0, x: -20 }}
+                          whileInView={{ opacity: 1, x: 0 }}
+                          viewport={{ once: true }}
+                          transition={{ duration: 0.5, delay: index * 0.05 }}
+                        >
+                          {para.replace('##', '').trim()}
+                        </motion.h2>
+                      );
+                    }
+                    if (para.trim().startsWith('###')) {
+                      return (
+                        <motion.h3
+                          key={index}
+                          className="text-xl font-semibold text-foreground mt-6 mb-3"
+                          initial={{ opacity: 0, x: -15 }}
+                          whileInView={{ opacity: 1, x: 0 }}
+                          viewport={{ once: true }}
+                          transition={{ duration: 0.5, delay: index * 0.05 }}
+                        >
+                          {para.replace('###', '').trim()}
+                        </motion.h3>
+                      );
+                    }
+                    if (para.trim().startsWith('-')) {
+                      return (
+                        <motion.li
+                          key={index}
+                          className="flex items-start gap-2 ml-4 my-2"
+                          initial={{ opacity: 0, x: -10 }}
+                          whileInView={{ opacity: 1, x: 0 }}
+                          viewport={{ once: true }}
+                          transition={{ duration: 0.4, delay: index * 0.03 }}
+                        >
+                          <span className="text-primary mt-2">•</span>
+                          <span>{para.replace('-', '').trim()}</span>
+                        </motion.li>
+                      );
+                    }
+                    if (para.trim().startsWith('**') && para.trim().endsWith('**')) {
+                      return (
+                        <motion.p
+                          key={index}
+                          className="font-semibold text-foreground my-4 text-lg"
+                          initial={{ opacity: 0, scale: 0.95 }}
+                          whileInView={{ opacity: 1, scale: 1 }}
+                          viewport={{ once: true }}
+                          transition={{ duration: 0.4, delay: index * 0.05 }}
+                        >
+                          {para.replace(/\*\*/g, '').trim()}
+                        </motion.p>
+                      );
+                    }
+                    if (para.trim()) {
+                      return (
+                        <motion.p
+                          key={index}
+                          className="my-3"
+                          initial={{ opacity: 0, y: 10 }}
+                          whileInView={{ opacity: 1, y: 0 }}
+                          viewport={{ once: true }}
+                          transition={{ duration: 0.4, delay: index * 0.02 }}
+                        >
+                          {para.trim()}
+                        </motion.p>
+                      );
+                    }
+                    return null;
+                  })}
                 </div>
               </div>
             </Card>

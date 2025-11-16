@@ -135,6 +135,7 @@ export default function Booking() {
       time: selectedTime,
       duration: "50 minutes",
       price: "Free for students",
+      counsellorId: counsellor.id.toString(),
     };
 
     // Redirect to payment page with booking data

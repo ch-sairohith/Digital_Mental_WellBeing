@@ -266,6 +266,7 @@ export function Header() {
                 <Button
                   variant="ghost"
                   className="w-full justify-start gap-2 text-foreground hover:bg-primary/10"
+                  onClick={() => setLocation("/profile")}
                 >
                   <User className="h-4 w-4" />
                   Profile
@@ -273,6 +274,7 @@ export function Header() {
                 <Button
                   variant="ghost"
                   className="w-full justify-start gap-2 text-foreground hover:bg-primary/10"
+                  onClick={() => setLocation("/settings")}
                 >
                   <Settings className="h-4 w-4" />
                   Settings

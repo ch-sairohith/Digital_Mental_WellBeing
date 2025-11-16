@@ -1,16 +1,19 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { MessageCircle, Send, X, Minimize2 } from "lucide-react";
+import { MessageCircle, Send, X, BookOpen, ArrowRight } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { useLocation } from "wouter";
+import { motion } from "framer-motion";
 
 interface Message {
   id: number;
   text: string;
   sender: "user" | "bot";
   timestamp: Date;
+  category?: string | null;
 }
 
 export function ChatBot() {
@@ -18,17 +21,30 @@ export function ChatBot() {
   const [messages, setMessages] = useState<Message[]>([
     {
       id: 1,
-      text: "Hello! I'm here to support you. How are you feeling today?",
+      text:
+        "<h>Hello! I'm here to support you 🤗</h>" +
+        "<p>How are you feeling today?</p>",
       sender: "bot",
       timestamp: new Date(),
     },
   ]);
   const [inputValue, setInputValue] = useState("");
   const [isTyping, setIsTyping] = useState(false);
+  const [, setLocation] = useLocation();
+
+  // Scroll reference to jump to START of latest message
+  const scrollRef = useRef<HTMLDivElement | null>(null);
+
+  // Auto-scroll whenever messages update
+  useEffect(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  }, [messages]);
 
   const quickReplies = ["Feeling stressed", "Need someone to talk to", "Sleep issues", "Anxiety"];
 
-  const handleSend = (text?: string) => {
+  const handleSend = async (text?: string) => {
     const messageText = text || inputValue.trim();
     if (!messageText) return;
 
@@ -39,20 +55,34 @@ export function ChatBot() {
       timestamp: new Date(),
     };
 
-    setMessages([...messages, newMessage]);
+    const updatedMessages = [...messages, newMessage];
+    setMessages(updatedMessages);
     setInputValue("");
-
     setIsTyping(true);
-    setTimeout(() => {
-      const botResponse: Message = {
-        id: messages.length + 2,
-        text: "I understand you're going through a difficult time. Remember, it's okay to feel this way. Would you like to explore some coping strategies or talk more about what's on your mind?",
+
+    try {
+      const res = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ messages: updatedMessages }),
+      });
+
+      const data = await res.json();
+
+      const botMessage: Message = {
+        id: updatedMessages.length + 1,
+        text: data.reply, 
         sender: "bot",
         timestamp: new Date(),
+        category: data.category || null,
       };
-      setMessages((prev) => [...prev, botResponse]);
-      setIsTyping(false);
-    }, 1500);
+
+      setMessages((prev) => [...prev, botMessage]);
+    } catch (error) {
+      console.error("Chat error:", error);
+    }
+
+    setIsTyping(false);
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -70,7 +100,6 @@ export function ChatBot() {
           size="lg"
           className="relative h-20 w-20 rounded-full shadow-2xl hover:scale-110 transition-all duration-300 bg-gradient-to-r from-primary to-emerald-600"
           onClick={() => setIsOpen(true)}
-          data-testid="button-open-chat"
         >
           <MessageCircle className="h-9 w-9" />
         </Button>
@@ -79,76 +108,97 @@ export function ChatBot() {
   }
 
   return (
-    <Card className="fixed bottom-8 left-8 w-[420px] max-w-[calc(100vw-4rem)] h-[650px] max-h-[calc(100vh-4rem)] flex flex-col shadow-2xl z-50 border-2" data-testid="card-chatbot">
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4 border-b bg-gradient-to-r from-primary/5 to-transparent">
+    <Card className="fixed bottom-8 left-8 w-[420px] h-[650px] flex flex-col shadow-2xl z-50 border-2">
+      <CardHeader className="flex flex-row items-center justify-between border-b bg-gradient-to-r from-primary/5">
         <div className="flex items-center gap-3">
-          <div className="relative">
-            <Avatar className="h-12 w-12 border-2 border-primary">
-              <AvatarFallback className="bg-gradient-to-br from-primary to-emerald-600 text-white font-semibold">
-                AI
-              </AvatarFallback>
-            </Avatar>
-            <div className="absolute bottom-0 right-0 h-3 w-3 bg-green-500 rounded-full border-2 border-background" />
-          </div>
+          <Avatar className="h-12 w-12 border-2 border-primary">
+            <AvatarFallback className="bg-gradient-to-br from-primary to-emerald-600 text-white font-semibold">AI</AvatarFallback>
+          </Avatar>
           <div>
             <CardTitle className="text-lg">MindEase AI Assistant</CardTitle>
-            <Badge variant="secondary" className="text-xs mt-1">
-              Online • Ready to help
-            </Badge>
+            <Badge variant="secondary" className="text-xs mt-1">Online • Ready to help</Badge>
           </div>
         </div>
-        <div className="flex gap-1">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => setIsOpen(false)}
-            data-testid="button-close-chat"
-          >
-            <X className="h-5 w-5" />
-          </Button>
-        </div>
+        <Button variant="ghost" size="icon" onClick={() => setIsOpen(false)}>
+          <X className="h-5 w-5" />
+        </Button>
       </CardHeader>
 
-      <CardContent className="flex-1 overflow-y-auto space-y-4 pb-4 pt-4">
-        {messages.map((message) => (
+      <CardContent className="flex-1 overflow-y-auto space-y-4 py-4">
+        {messages.map((m, index) => (
           <div
-            key={message.id}
-            className={`flex ${message.sender === "user" ? "justify-end" : "justify-start"} animate-fade-in-up`}
+            key={m.id}
+            ref={index === messages.length - 1 ? scrollRef : null} // anchor on last message
+            className={`flex ${m.sender === "user" ? "justify-end" : "justify-start"}`}
           >
             <div
-              className={`max-w-[80%] rounded-2xl px-4 py-3 shadow-sm ${
-                message.sender === "user"
+              className={`max-w-[80%] px-4 py-3 rounded-2xl shadow-sm ${
+                m.sender === "user"
                   ? "bg-gradient-to-br from-primary to-emerald-600 text-white rounded-tr-sm"
                   : "bg-muted rounded-tl-sm"
               }`}
-              data-testid={`message-${message.sender}`}
             >
-              <p className="text-sm leading-relaxed">{message.text}</p>
+              <div
+                className="text-sm space-y-2 leading-relaxed"
+                dangerouslySetInnerHTML={{ __html: m.text }}
+              ></div>
+              
+              {/* Recommendations div for bot messages with category */}
+              {m.sender === "bot" && m.category && (
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.3, delay: 0.2 }}
+                  className="mt-3 pt-3 border-t border-border/50"
+                >
+                  <div className="flex items-center gap-2 mb-2">
+                    <BookOpen className="h-4 w-4 text-primary" />
+                    <span className="text-xs font-semibold text-foreground">Recommended Resources</span>
+                  </div>
+                  <motion.div
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                  >
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-full text-xs bg-primary/5 hover:bg-primary/10 border-primary/30"
+                      onClick={() => {
+                        setLocation(`/resources?category=${encodeURIComponent(m.category!)}`);
+                        setIsOpen(false);
+                      }}
+                    >
+                      Explore {m.category} Resources
+                      <ArrowRight className="h-3 w-3 ml-2" />
+                    </Button>
+                  </motion.div>
+                </motion.div>
+              )}
             </div>
           </div>
         ))}
+
         {isTyping && (
           <div className="flex justify-start">
-            <div className="bg-muted rounded-2xl rounded-tl-sm px-4 py-3">
+            <div className="bg-muted rounded-2xl px-4 py-3">
               <div className="flex gap-1">
-                <span className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: "0ms" }}></span>
-                <span className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: "150ms" }}></span>
-                <span className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: "300ms" }}></span>
+                <span className="w-2 h-2 bg-primary rounded-full animate-bounce"></span>
+                <span className="w-2 h-2 bg-primary rounded-full animate-bounce delay-150"></span>
+                <span className="w-2 h-2 bg-primary rounded-full animate-bounce delay-300"></span>
               </div>
             </div>
           </div>
         )}
       </CardContent>
 
-      <div className="px-6 pb-3 border-t pt-3">
+      <div className="px-6 pb-3 border-t">
         <div className="flex flex-wrap gap-2">
           {quickReplies.map((reply) => (
             <Badge
               key={reply}
               variant="outline"
-              className="cursor-pointer hover-elevate active-elevate-2 transition-all hover:scale-105 border-primary/30"
+              className="cursor-pointer hover:scale-105 border-primary/30"
               onClick={() => handleSend(reply)}
-              data-testid={`badge-quick-reply-${reply.toLowerCase().replace(/\s+/g, '-')}`}
             >
               {reply}
             </Badge>
@@ -156,7 +206,7 @@ export function ChatBot() {
         </div>
       </div>
 
-      <CardFooter className="pt-0 pb-6 px-6">
+      <CardFooter className="px-6 pb-6">
         <div className="flex gap-2 w-full">
           <Input
             placeholder="Type your message..."
@@ -164,13 +214,11 @@ export function ChatBot() {
             onChange={(e) => setInputValue(e.target.value)}
             onKeyPress={handleKeyPress}
             className="flex-1 rounded-full"
-            data-testid="input-chat-message"
           />
-          <Button 
-            size="icon" 
-            onClick={() => handleSend()} 
-            className="rounded-full transition-all hover:scale-110 shadow-lg bg-gradient-to-r from-primary to-emerald-600" 
-            data-testid="button-send-message"
+          <Button
+            size="icon"
+            onClick={() => handleSend()}
+            className="rounded-full bg-gradient-to-r from-primary to-emerald-600"
           >
             <Send className="h-4 w-4" />
           </Button>
