@@ -70,6 +70,13 @@ function GuestRedirect() {
 
 
 function UserRouter() {
+  const [location] = useLocation();
+
+  // Scroll to top on route change
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [location]);
+
   return (
     <Switch>
       <Route path="/" component={UserHome} />
@@ -122,8 +129,8 @@ function UserRouter() {
 // ⚡ INSTITUTE ROUTES
 // ------------------------------
 function InstituteRouter() {
-  return( 
-  <Switch>
+  return (
+    <Switch>
       <Route path="/" component={OrganizationDashboard} />
       <Route path="/manage-counsellors" component={ManageCounsellors} />
       <Route path="/add-counsellor" component={AddCounsellor} />

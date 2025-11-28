@@ -3,7 +3,8 @@ import { createServer, Server } from "http";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
 const genAI = new GoogleGenerativeAI("AIzaSyDnP4F0Ca9UC_HEADM49A5peeD5XuFBHzQ");
-    function formatBotResponse(text: string) {
+
+function formatBotResponse(text: string) {
   return text
     // Convert Gemini headings like **Heading** into <h3>
     .replace(/\*\*(.+?)\*\*/g, "<h3>$1</h3>")
@@ -15,7 +16,7 @@ const genAI = new GoogleGenerativeAI("AIzaSyDnP4F0Ca9UC_HEADM49A5peeD5XuFBHzQ");
 
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  
+
   app.post("/api/mood", async (req: Request, res: Response) => {
     try {
       const { image } = req.body;
@@ -53,51 +54,52 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.status(500).json({ error: "Error analyzing mood" });
     }
   });
- app.post("/api/chat", async (req, res) => {
-  try {
-    type ChatMessage = { sender: "user" | "bot" | string; text: string };
-    let { messages }: { messages: ChatMessage[] } = req.body;
 
-    // Remove initial bot greeting
-    if (messages.length > 0 && messages[0].sender === "bot") {
-      messages = messages.slice(1);
-    }
+  app.post("/api/chat", async (req, res) => {
+    try {
+      type ChatMessage = { sender: "user" | "bot" | string; text: string };
+      let { messages }: { messages: ChatMessage[] } = req.body;
 
-    // Convert chat history
-    const formattedHistory = messages.map((msg) => ({
-      role: msg.sender === "user" ? "user" : "model",
-      parts: [{ text: msg.text }],
-    }));
+      // Remove initial bot greeting
+      if (messages.length > 0 && messages[0].sender === "bot") {
+        messages = messages.slice(1);
+      }
 
-    const userMessage = messages[messages.length - 1].text;
+      // Convert chat history
+      const formattedHistory = messages.map((msg) => ({
+        role: msg.sender === "user" ? "user" : "model",
+        parts: [{ text: msg.text }],
+      }));
 
-    // Analyze category from user message
-    const categoryModel = genAI.getGenerativeModel({
-      model: "gemini-2.5-flash",
-    });
+      const userMessage = messages[messages.length - 1].text;
 
-    const categoryPrompt = `Analyze this mental health concern and return ONLY one of these categories: Anxiety, Depression, Stress, Sleep, Relationships, or "None" if it doesn't fit any category. Just return the category name, nothing else.
+      // Analyze category from user message
+      const categoryModel = genAI.getGenerativeModel({
+        model: "gemini-2.5-flash",
+      });
+
+      const categoryPrompt = `Analyze this mental health concern and return ONLY one of these categories: Anxiety, Depression, Stress, Sleep, Relationships, or "None" if it doesn't fit any category. Just return the category name, nothing else.
 
 User message: "${userMessage}"
 
 Category:`;
 
-    let detectedCategory: string | null = null;
-    try {
-      const categoryResponse = await categoryModel.generateContent(categoryPrompt);
-      const categoryText = categoryResponse.response.text().trim();
-      const validCategories = ["Anxiety", "Depression", "Stress", "Sleep", "Relationships"];
-      if (validCategories.includes(categoryText)) {
-        detectedCategory = categoryText;
+      let detectedCategory: string | null = null;
+      try {
+        const categoryResponse = await categoryModel.generateContent(categoryPrompt);
+        const categoryText = categoryResponse.response.text().trim();
+        const validCategories = ["Anxiety", "Depression", "Stress", "Sleep", "Relationships"];
+        if (validCategories.includes(categoryText)) {
+          detectedCategory = categoryText;
+        }
+      } catch (err) {
+        console.error("Category detection error:", err);
       }
-    } catch (err) {
-      console.error("Category detection error:", err);
-    }
 
-    // MODEL SETUP WITH SYSTEM INSTRUCTION ONLY HERE
-    const model = genAI.getGenerativeModel({
-      model: "gemini-2.5-flash",
-      systemInstruction: `
+      // MODEL SETUP WITH SYSTEM INSTRUCTION ONLY HERE
+      const model = genAI.getGenerativeModel({
+        model: "gemini-2.5-flash",
+        systemInstruction: `
 You are a mental health support chatbot.
 dont ask many questions to user give the options or tell for general case
 Return ALL responses ONLY in this EXACT HTML-like structure:
@@ -111,25 +113,25 @@ RULES:
 - NO ###, **, *, or any markdown characters.
 - Do not add extra text outside the tags.
 `,
-    });
+      });
 
-    const chatSession = model.startChat({
-      history: formattedHistory,
-    });
+      const chatSession = model.startChat({
+        history: formattedHistory,
+      });
 
-    const response = await chatSession.sendMessage(userMessage);
-    const rawText = response.response.text();
-    const formatted = formatBotResponse(rawText);
-    console.log("Formatted bot response:", formatted);
-    res.json({ 
-      reply: formatted,
-      category: detectedCategory
-    });
-  } catch (error) {
-    console.error("Gemini error:", error);
-    res.status(500).json({ error: "Gemini failed" });
-  }
-});
+      const response = await chatSession.sendMessage(userMessage);
+      const rawText = response.response.text();
+      const formatted = formatBotResponse(rawText);
+      console.log("Formatted bot response:", formatted);
+      res.json({
+        reply: formatted,
+        category: detectedCategory
+      });
+    } catch (error) {
+      console.error("Gemini error:", error);
+      res.status(500).json({ error: "Gemini failed" });
+    }
+  });
 
 
   const httpServer = createServer(app);

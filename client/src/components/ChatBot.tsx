@@ -71,7 +71,7 @@ export function ChatBot() {
 
       const botMessage: Message = {
         id: updatedMessages.length + 1,
-        text: data.reply, 
+        text: data.reply,
         sender: "bot",
         timestamp: new Date(),
         category: data.category || null,
@@ -132,17 +132,16 @@ export function ChatBot() {
             className={`flex ${m.sender === "user" ? "justify-end" : "justify-start"}`}
           >
             <div
-              className={`max-w-[80%] px-4 py-3 rounded-2xl shadow-sm ${
-                m.sender === "user"
+              className={`max-w-[80%] px-4 py-3 rounded-2xl shadow-sm ${m.sender === "user"
                   ? "bg-gradient-to-br from-primary to-emerald-600 text-white rounded-tr-sm"
                   : "bg-muted rounded-tl-sm"
-              }`}
+                }`}
             >
               <div
                 className="text-sm space-y-2 leading-relaxed"
                 dangerouslySetInnerHTML={{ __html: m.text }}
               ></div>
-              
+
               {/* Recommendations div for bot messages with category */}
               {m.sender === "bot" && m.category && (
                 <motion.div

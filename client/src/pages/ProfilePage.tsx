@@ -1,12 +1,12 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { ArrowLeft, Edit3, Save, User, Upload } from "lucide-react";
+import { ArrowLeft, Edit3, Save, User, Upload, BookOpen, FileText, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { auth, db } from "@/lib/firebase";
-import { doc, updateDoc } from "firebase/firestore";
+import { doc, updateDoc, getDoc } from "firebase/firestore";
 import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { updateProfile } from "firebase/auth";
 import { Header } from "@/components/Header";
@@ -16,6 +16,19 @@ import { useLocation } from "wouter";
 import { motion } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
 
+// Resource names mapping
+const resourceNames: Record<number, string> = {
+  1: "Understanding Anxiety: A Student's Guide",
+  2: "Breathing Exercises for Stress Relief",
+  3: "Sleep Better: Tips for Students",
+  4: "Managing Academic Pressure",
+  5: "Building Healthy Relationships",
+  6: "Recognizing Depression Signs",
+  7: "Mindfulness Meditation for Beginners",
+  8: "Coping with Homesickness"
+};
+
+
 export default function ProfilePage() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
@@ -24,6 +37,7 @@ export default function ProfilePage() {
   const [photoURL, setPhotoURL] = useState(user?.photoURL || "");
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [savedResources, setSavedResources] = useState<number[]>([]);
 
   useEffect(() => {
     const unsub = auth.onAuthStateChanged((u) => {
@@ -33,6 +47,20 @@ export default function ProfilePage() {
     });
     return () => unsub();
   }, []);
+
+  useEffect(() => {
+    const fetchSavedResources = async () => {
+      if (!user) return;
+      try {
+        const userDoc = await getDoc(doc(db, "users", user.uid));
+        const saved = userDoc.data()?.savedResources || [];
+        setSavedResources(saved);
+      } catch (error) {
+        console.error("Error fetching saved resources:", error);
+      }
+    };
+    fetchSavedResources();
+  }, [user]);
 
   const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!user || !e.target.files?.[0]) return;
@@ -69,6 +97,25 @@ export default function ProfilePage() {
       });
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleRemoveSaved = async (resourceId: number) => {
+    if (!user) return;
+    try {
+      const updated = savedResources.filter(id => id !== resourceId);
+      await updateDoc(doc(db, "users", user.uid), { savedResources: updated });
+      setSavedResources(updated);
+      toast({
+        title: "Removed",
+        description: "Resource removed from saved items.",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to remove resource.",
+        variant: "destructive",
+      });
     }
   };
 
@@ -119,6 +166,58 @@ export default function ProfilePage() {
                 </div>
               </CardContent>
             </Card>
+
+            {/* Saved Resources Section */}
+            {savedResources.length > 0 && (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, delay: 0.2 }}
+                className="mt-8"
+              >
+                <Card className="bg-card/90 backdrop-blur-xl border-2 rounded-2xl shadow-xl">
+                  <CardHeader>
+                    <CardTitle className="text-xl font-bold flex items-center gap-2">
+                      <BookOpen className="h-5 w-5 text-primary" />
+                      Saved Resources ({savedResources.length})
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid gap-4">
+                      {savedResources.map((resourceId) => (
+                        <motion.div
+                          key={resourceId}
+                          initial={{ opacity: 0, x: -20 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          className="flex items-center justify-between p-4 bg-muted/50 rounded-lg hover:bg-muted transition-colors"
+                        >
+                          <div className="flex items-center gap-3 flex-1 cursor-pointer" onClick={() => setLocation(`/resources/${resourceId}`)}>
+                            <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                              <FileText className="h-5 w-5 text-primary" />
+                            </div>
+                            <div>
+                              <p className="font-semibold">{resourceNames[resourceId] || `Resource #${resourceId}`}</p>
+                              <p className="text-sm text-muted-foreground">Click to view</p>
+                            </div>
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleRemoveSaved(resourceId);
+                            }}
+                            className="hover:bg-destructive/10 hover:text-destructive"
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </motion.div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            )}
           </motion.div>
         </div>
       </main>

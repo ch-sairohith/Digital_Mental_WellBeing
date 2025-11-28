@@ -12,10 +12,10 @@ export function MeetAI() {
   return (
     <section ref={sectionRef} className="w-full py-20 md:py-32 relative overflow-hidden">
       <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-transparent to-accent/10 -z-10" />
-      
+
       <div className="container mx-auto px-4">
         <div className="grid lg:grid-cols-2 gap-12 items-center">
-          <motion.div 
+          <motion.div
             className="space-y-8"
             initial={{ opacity: 0, x: -50 }}
             animate={isInView ? { opacity: 1, x: 0 } : { opacity: 0, x: -50 }}
@@ -28,7 +28,7 @@ export function MeetAI() {
             >
               <Badge variant="secondary" className="mb-2">Meet Your AI Assistant</Badge>
             </motion.div>
-            <motion.div 
+            <motion.div
               className="space-y-4"
               initial={{ opacity: 0, y: 20 }}
               animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
@@ -38,12 +38,12 @@ export function MeetAI() {
                 Your Compassionate AI Companion
               </h2>
               <p className="text-lg text-muted-foreground leading-relaxed">
-                Our AI assistant is trained to understand student mental health challenges with empathy and care. 
+                Our AI assistant is trained to understand student mental health challenges with empathy and care.
                 It's like talking to a friend who's always there to listen, never judges, and offers helpful guidance.
               </p>
             </motion.div>
 
-            <motion.div 
+            <motion.div
               className="space-y-4"
               initial={{ opacity: 0, y: 20 }}
               animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
@@ -76,21 +76,10 @@ export function MeetAI() {
               })}
             </motion.div>
 
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
-              transition={{ duration: 0.6, delay: 0.9 }}
-            >
-              <Link href="/chat">
-                <Button size="lg" className="rounded-full transition-all hover:scale-105 shadow-lg" data-testid="button-try-ai">
-                  <MessageCircle className="mr-2 h-5 w-5" />
-                  Try AI Chat Now
-                </Button>
-              </Link>
-            </motion.div>
+
           </motion.div>
 
-          <motion.div 
+          <motion.div
             className="relative"
             initial={{ opacity: 0, x: 50, scale: 0.9 }}
             animate={isInView ? { opacity: 1, x: 0, scale: 1 } : { opacity: 0, x: 50, scale: 0.9 }}
@@ -114,7 +103,7 @@ export function MeetAI() {
                   </div>
 
                   <div className="space-y-4">
-                    <motion.div 
+                    <motion.div
                       className="flex justify-start"
                       initial={{ opacity: 0, x: -20 }}
                       animate={isInView ? { opacity: 1, x: 0 } : { opacity: 0, x: -20 }}
@@ -125,7 +114,7 @@ export function MeetAI() {
                       </div>
                     </motion.div>
 
-                    <motion.div 
+                    <motion.div
                       className="flex justify-end"
                       initial={{ opacity: 0, x: 20 }}
                       animate={isInView ? { opacity: 1, x: 0 } : { opacity: 0, x: 20 }}
@@ -136,7 +125,7 @@ export function MeetAI() {
                       </div>
                     </motion.div>
 
-                    <motion.div 
+                    <motion.div
                       className="flex justify-start"
                       initial={{ opacity: 0, x: -20 }}
                       animate={isInView ? { opacity: 1, x: 0 } : { opacity: 0, x: -20 }}

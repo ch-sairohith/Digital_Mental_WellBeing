@@ -1,6 +1,5 @@
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
-import { ChatBot } from "@/components/ChatBot";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -9,46 +8,46 @@ import { Video, Clock, BookOpen, PlayCircle } from "lucide-react";
 const interactiveVideos = [
   {
     id: 1,
-    title: "Guided Breathwork for Instant Calm",
-    duration: "12 min",
+    title: "5-Minute Meditation You Can Do Anywhere",
+    duration: "5 min",
     category: "Breathwork",
     level: "Beginner",
     description:
-      "Follow along with rhythmic breathing animations and on-screen prompts to ease anxiety in minutes.",
-    link: "https://www.youtube.com/watch?v=inpok4MKVLM",
+      "A quick and effective guided meditation to help you find calm and clarity in just 5 minutes.",
+    link: "https://www.youtube.com/watch?v=acUZdGd_3Dg",
     platform: "YouTube",
   },
   {
     id: 2,
-    title: "Body Scan Meditation for Students",
-    duration: "15 min",
+    title: "10 Minute Body Scan Meditation",
+    duration: "10 min",
     category: "Mindfulness",
     level: "All Levels",
     description:
-      "An interactive body scan where you tap along with each zone to stay present and grounded.",
-    link: "https://www.youtube.com/watch?v=WCQbxf868cc",
+      "Reduce stress and anxiety with this guided body scan meditation to help you relax and ground yourself.",
+    link: "https://youtu.be/ANW1upLaNSg?si=aTx0_4N1Vmm0fTZF",
     platform: "YouTube",
   },
   {
     id: 3,
-    title: "Focus Reset: Pomodoro Stretch Flow",
-    duration: "10 min",
+    title: "5 Minute Meditation for Focus",
+    duration: "5 min",
     category: "Focus",
     level: "All Levels",
     description:
-      "Stretch, breathe, and refocus with guided timers that pair movement and attention cues.",
-    link: "https://www.youtube.com/watch?v=mgkM5GFJ8L8",
+      "Regain your focus and concentration with this short, effective guided meditation session.",
+    link: "https://www.youtube.com/watch?v=zSkFFW--Ma0",
     platform: "YouTube",
   },
   {
     id: 4,
-    title: "Sleep Stories: Drift Into Rest",
-    duration: "18 min",
+    title: "Guided Sleep Meditation",
+    duration: "10 min",
     category: "Sleep",
     level: "All Levels",
     description:
-      "Immersive narration + ambient visuals. Adjust ambient levels while you listen.",
-    link: "https://www.youtube.com/watch?v=6p_yaNFSYao",
+      "Drift off to sleep peacefully with this soothing guided meditation designed to help you relax.",
+    link: "https://www.youtube.com/watch?v=t0kACis_dJE",
     platform: "YouTube",
   },
 ];
@@ -116,9 +115,7 @@ export default function ResourceVideos() {
                       Watch on {video.platform}
                     </Button>
                   </a>
-                  <Button variant="outline" className="rounded-full">
-                    Save
-                  </Button>
+
                 </div>
               </CardContent>
             </Card>
@@ -127,7 +124,6 @@ export default function ResourceVideos() {
       </main>
 
       <Footer />
-      <ChatBot />
     </div>
   );
 }

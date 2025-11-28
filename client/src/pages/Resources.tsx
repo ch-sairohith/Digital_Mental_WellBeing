@@ -1,6 +1,5 @@
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
-import { ChatBot } from "@/components/ChatBot";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -43,7 +42,7 @@ function ResourceCard({ resource, index }: { resource: Resource; index: number }
       >
         <CardHeader>
           <div className="flex items-start justify-between mb-2">
-            <motion.div 
+            <motion.div
               className="h-12 w-12 rounded-xl bg-gradient-to-br from-primary to-emerald-600 flex items-center justify-center group-hover:scale-110 transition-transform"
               whileHover={{ rotate: [0, -10, 10, -10, 0], transition: { duration: 0.5 } }}
             >
@@ -109,19 +108,19 @@ const resources = [
   {
     id: 2,
     title: "Breathing Exercises for Stress Relief",
-    type: "Video",
+    type: "Document",
     category: "Stress",
     duration: "12 min",
-    icon: Video,
+    icon: FileText,
     description: "Follow along with guided breathing techniques to calm your mind during stressful moments.",
   },
   {
     id: 3,
     title: "Sleep Better: Tips for Students",
-    type: "Audio",
+    type: "Document",
     category: "Sleep",
     duration: "15 min",
-    icon: Headphones,
+    icon: FileText,
     description: "Guided meditation and sleep hygiene tips to improve your rest and recovery.",
   },
   {
@@ -136,10 +135,10 @@ const resources = [
   {
     id: 5,
     title: "Building Healthy Relationships",
-    type: "Video",
+    type: "Document",
     category: "Relationships",
     duration: "18 min",
-    icon: Video,
+    icon: FileText,
     description: "Understanding boundaries, communication, and maintaining connections in college.",
   },
   {
@@ -154,19 +153,19 @@ const resources = [
   {
     id: 7,
     title: "Mindfulness Meditation for Beginners",
-    type: "Audio",
+    type: "Document",
     category: "Anxiety",
     duration: "10 min",
-    icon: Headphones,
+    icon: FileText,
     description: "Start your mindfulness journey with simple, effective meditation practices.",
   },
   {
     id: 8,
     title: "Coping with Homesickness",
-    type: "Video",
+    type: "Document",
     category: "Depression",
     duration: "14 min",
-    icon: Video,
+    icon: FileText,
     description: "Practical advice for dealing with being away from home and adjusting to campus life.",
   },
 ];
@@ -208,7 +207,7 @@ export default function Resources() {
   return (
     <div className="min-h-screen bg-background">
       <Header />
-      
+
       <main className="pt-24 pb-20">
         <section className="relative w-full py-16 bg-gradient-to-br from-primary/10 via-background to-secondary/20">
           <div className="container mx-auto px-4">
@@ -225,7 +224,7 @@ export default function Resources() {
               >
                 <Badge variant="secondary" className="mb-2">Resource Library</Badge>
               </motion.div>
-              <motion.h1 
+              <motion.h1
                 className="font-accent text-4xl md:text-5xl lg:text-6xl font-bold"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -233,7 +232,7 @@ export default function Resources() {
               >
                 Mental Health Resources
               </motion.h1>
-              <motion.p 
+              <motion.p
                 className="text-lg text-muted-foreground"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -242,7 +241,7 @@ export default function Resources() {
                 Evidence-based articles, videos, and guides to support your mental wellness journey.
               </motion.p>
 
-              <motion.div 
+              <motion.div
                 className="relative max-w-xl mx-auto mt-8"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -261,7 +260,7 @@ export default function Resources() {
         </section>
 
         <section id="category-section" className="container mx-auto px-4 py-12">
-          <motion.div 
+          <motion.div
             className="flex flex-wrap justify-center gap-3 mb-12"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -308,7 +307,7 @@ export default function Resources() {
       </main>
 
       <Footer />
-      <ChatBot />
+
     </div>
   );
 }

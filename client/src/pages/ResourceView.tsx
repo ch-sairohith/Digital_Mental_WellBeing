@@ -1,25 +1,26 @@
 import { useRoute, Link } from "wouter";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
-import { ChatBot } from "@/components/ChatBot";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { 
-  ArrowLeft, 
-  Clock, 
-  FileText, 
-  Video, 
-  Headphones, 
+import {
+  ArrowLeft,
+  Clock,
+  FileText,
+  Video,
+  Headphones,
   BookOpen,
   Play,
   Download,
   Share2,
   Bookmark,
-  Check
+  Check,
+  Volume2,
+  StopCircle
 } from "lucide-react";
 import { motion } from "framer-motion";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { auth, db } from "@/lib/firebase";
 import { doc, getDoc, setDoc, updateDoc } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
@@ -74,10 +75,10 @@ Remember, it's okay to ask for help. Your mental health is just as important as 
   {
     id: 2,
     title: "Breathing Exercises for Stress Relief",
-    type: "Video",
+    type: "Document",
     category: "Stress",
     duration: "12 min",
-    icon: Video,
+    icon: FileText,
     description: "Follow along with guided breathing techniques to calm your mind during stressful moments.",
     content: `This guided video session will walk you through several proven breathing techniques designed to help you manage stress and anxiety effectively.
 
@@ -107,10 +108,10 @@ Follow along with the video and practice these techniques regularly for best res
   {
     id: 3,
     title: "Sleep Better: Tips for Students",
-    type: "Audio",
+    type: "Document",
     category: "Sleep",
     duration: "15 min",
-    icon: Headphones,
+    icon: FileText,
     description: "Guided meditation and sleep hygiene tips to improve your rest and recovery.",
     content: `Quality sleep is essential for academic success and overall well-being. This audio guide combines sleep hygiene tips with a calming meditation to help you achieve better rest.
 
@@ -186,10 +187,10 @@ Remember, your worth is not determined by your grades. Balance is key to long-te
   {
     id: 5,
     title: "Building Healthy Relationships",
-    type: "Video",
+    type: "Document",
     category: "Relationships",
     duration: "18 min",
-    icon: Video,
+    icon: FileText,
     description: "Understanding boundaries, communication, and maintaining connections in college.",
     content: `College is a time of significant social growth. This video guide helps you navigate relationships, set healthy boundaries, and build meaningful connections.
 
@@ -270,10 +271,10 @@ Remember, seeking help is a sign of strength, not weakness.`,
   {
     id: 7,
     title: "Mindfulness Meditation for Beginners",
-    type: "Audio",
+    type: "Document",
     category: "Anxiety",
     duration: "10 min",
-    icon: Headphones,
+    icon: FileText,
     description: "Start your mindfulness journey with simple, effective meditation practices.",
     content: `Mindfulness meditation is a powerful tool for managing anxiety and improving overall well-being. This beginner-friendly audio guide introduces you to the practice.
 
@@ -313,10 +314,10 @@ Begin your mindfulness journey today and experience the transformative power of 
   {
     id: 8,
     title: "Coping with Homesickness",
-    type: "Video",
+    type: "Document",
     category: "Depression",
     duration: "14 min",
-    icon: Video,
+    icon: FileText,
     description: "Practical advice for dealing with being away from home and adjusting to campus life.",
     content: `Homesickness is a common experience for students, especially those living away from home for the first time. This video provides practical strategies to help you adjust and thrive.
 
@@ -377,6 +378,135 @@ export default function ResourceView() {
   const { toast } = useToast();
   const [isSaved, setIsSaved] = useState(false);
   const user = auth.currentUser;
+  const contentRef = useRef<HTMLElement>(null);
+  const [isReading, setIsReading] = useState(false);
+  const [readingParagraph, setReadingParagraph] = useState<number | null>(null);
+  const [highlightedWordIndex, setHighlightedWordIndex] = useState<number | null>(null);
+  const speechRef = useRef<SpeechSynthesisUtterance | null>(null);
+
+  const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
+
+  // Unified text cleaner for both speech and display to ensure index matching
+  const cleanMarkdown = (text: string) => {
+    return text
+      .replace(/^#+\s+/, '') // Remove headers
+      .replace(/^\-\s+/, '') // Remove list bullets
+      .replace(/^\d+\.\s+/, '') // Remove numbered lists
+      .replace(/\*\*/g, '') // Remove bold
+      .replace(/\*/g, '') // Remove asterisks
+      .trim();
+  };
+
+  useEffect(() => {
+    const updateVoices = () => {
+      setVoices(window.speechSynthesis.getVoices());
+    };
+    updateVoices();
+    window.speechSynthesis.onvoiceschanged = updateVoices;
+
+    return () => {
+      window.speechSynthesis.cancel();
+      window.speechSynthesis.onvoiceschanged = null;
+    };
+  }, []);
+
+  const handleReadAloud = () => {
+    if (isReading) {
+      window.speechSynthesis.cancel();
+      setIsReading(false);
+      setReadingParagraph(null);
+      setHighlightedWordIndex(null);
+      return;
+    }
+
+    if (!resource) return;
+
+    // Scroll to content
+    contentRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+    setIsReading(true);
+    const renderParagraphs = resource.content.split('\n');
+
+    // Cancel any existing speech
+    window.speechSynthesis.cancel();
+
+    const utterances: SpeechSynthesisUtterance[] = [];
+
+    renderParagraphs.forEach((text, index) => {
+      if (!text.trim()) return;
+
+      const cleanText = cleanMarkdown(text);
+      const utterance = new SpeechSynthesisUtterance(cleanText);
+
+      // Select a female voice if available
+      const femaleVoice = voices.find(v =>
+        v.name.includes('Female') ||
+        v.name.includes('Zira') ||
+        v.name.includes('Google US English') ||
+        v.name.includes('Samantha')
+      );
+
+      if (femaleVoice) {
+        utterance.voice = femaleVoice;
+      }
+
+      // Voice Modulation based on text type
+      if (text.trim().startsWith('#')) {
+        // Headers: Deeper, slower, more authoritative
+        utterance.pitch = 0.9;
+        utterance.rate = 0.85;
+        utterance.volume = 1.1;
+      } else if (text.trim().startsWith('-') || /^\d+\./.test(text.trim())) {
+        // Lists: Slightly faster, distinct
+        utterance.pitch = 1.05;
+        utterance.rate = 0.95;
+      } else {
+        // Body text: Engaging, normal
+        utterance.pitch = 1.1; // Slightly higher for engagement
+        utterance.rate = 0.9;
+      }
+
+      utterance.onstart = () => {
+        setReadingParagraph(index);
+        setHighlightedWordIndex(null);
+      };
+
+      utterance.onboundary = (event) => {
+        if (event.name === 'word') {
+          // Calculate word index based on charIndex
+          const words = cleanText.split(/\s+/);
+          let currentLength = 0;
+          let foundIndex = -1;
+
+          for (let i = 0; i < words.length; i++) {
+            if (currentLength <= event.charIndex && event.charIndex < currentLength + words[i].length + 1) {
+              foundIndex = i;
+              break;
+            }
+            currentLength += words[i].length + 1;
+          }
+
+          if (foundIndex !== -1) {
+            setHighlightedWordIndex(foundIndex);
+          }
+        }
+      };
+
+      utterances.push(utterance);
+    });
+
+    if (utterances.length > 0) {
+      utterances[utterances.length - 1].onend = () => {
+        setIsReading(false);
+        setReadingParagraph(null);
+        setHighlightedWordIndex(null);
+      };
+
+      utterances.forEach(u => window.speechSynthesis.speak(u));
+    } else {
+      setIsReading(false);
+    }
+  };
 
   useEffect(() => {
     const checkSaved = async () => {
@@ -410,16 +540,16 @@ export default function ResourceView() {
         setIsSaved(false);
         toast({
           title: "Removed",
-          description: "Resource removed from saved items.",
+          description: "Resource removed from your saved items in profile.",
         });
       } else {
-        await updateDoc(doc(db, "users", user.uid), { 
-          savedResources: [...savedResources, resource.id] 
+        await updateDoc(doc(db, "users", user.uid), {
+          savedResources: [...savedResources, resource.id]
         });
         setIsSaved(true);
         toast({
-          title: "Saved",
-          description: "Resource saved for later!",
+          title: "Saved Successfully! ✓",
+          description: "Your file has been saved successfully in your profile. Feel free to check it out!",
         });
       }
     } catch (error) {
@@ -465,7 +595,7 @@ export default function ResourceView() {
 
   const handleDownloadPDF = async () => {
     if (!resource) return;
-    
+
     try {
       // Create a simple text-based PDF using browser print
       const printWindow = window.open("", "_blank");
@@ -477,7 +607,7 @@ export default function ResourceView() {
         });
         return;
       }
-      
+
       // Format content with better styling
       const formattedContent = resource.content
         .split('\n')
@@ -501,7 +631,7 @@ export default function ResourceView() {
         })
         .filter(p => p)
         .join('');
-      
+
       printWindow.document.write(`
         <!DOCTYPE html>
         <html>
@@ -533,7 +663,7 @@ export default function ResourceView() {
           </body>
         </html>
       `);
-      
+
       printWindow.document.close();
       setTimeout(() => {
         printWindow.print();
@@ -572,7 +702,7 @@ export default function ResourceView() {
           </Card>
         </div>
         <Footer />
-        <ChatBot />
+
       </div>
     );
   }
@@ -582,7 +712,7 @@ export default function ResourceView() {
   return (
     <div className="min-h-screen bg-background">
       <Header />
-      <ChatBot />
+
 
       <main className="pt-24 pb-20">
         {/* Hero Section */}
@@ -616,7 +746,7 @@ export default function ResourceView() {
               <h1 className="font-accent text-4xl md:text-5xl lg:text-6xl font-bold">
                 {resource.title}
               </h1>
-              
+
               <p className="text-lg text-muted-foreground leading-relaxed">
                 {resource.description}
               </p>
@@ -634,35 +764,30 @@ export default function ResourceView() {
                 </div>
               </div>
 
-              <motion.div 
+              <motion.div
                 className="flex flex-wrap gap-3 pt-4"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5, delay: 0.4 }}
               >
                 <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                  <Button className="rounded-full">
-                    {resource.type === "Video" ? (
+                  <Button className="rounded-full" onClick={handleReadAloud}>
+                    {isReading ? (
                       <>
-                        <Play className="w-4 h-4 mr-2" />
-                        Watch Now
-                      </>
-                    ) : resource.type === "Audio" ? (
-                      <>
-                        <Headphones className="w-4 h-4 mr-2" />
-                        Listen Now
+                        <StopCircle className="w-4 h-4 mr-2" />
+                        Stop Reading
                       </>
                     ) : (
                       <>
-                        <BookOpen className="w-4 h-4 mr-2" />
-                        Read Article
+                        <Volume2 className="w-4 h-4 mr-2" />
+                        Read Aloud
                       </>
                     )}
                   </Button>
                 </motion.div>
                 <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                  <Button 
-                    variant={isSaved ? "default" : "outline"} 
+                  <Button
+                    variant={isSaved ? "default" : "outline"}
                     className="rounded-full"
                     onClick={handleSaveForLater}
                   >
@@ -680,8 +805,8 @@ export default function ResourceView() {
                   </Button>
                 </motion.div>
                 <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                  <Button 
-                    variant="outline" 
+                  <Button
+                    variant="outline"
                     className="rounded-full"
                     onClick={handleShare}
                   >
@@ -689,25 +814,23 @@ export default function ResourceView() {
                     Share
                   </Button>
                 </motion.div>
-                {resource.type === "Article" && (
-                  <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                    <Button 
-                      variant="outline" 
-                      className="rounded-full"
-                      onClick={handleDownloadPDF}
-                    >
-                      <Download className="w-4 h-4 mr-2" />
-                      Download PDF
-                    </Button>
-                  </motion.div>
-                )}
+                <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                  <Button
+                    variant="outline"
+                    className="rounded-full"
+                    onClick={handleDownloadPDF}
+                  >
+                    <Download className="w-4 h-4 mr-2" />
+                    Download PDF
+                  </Button>
+                </motion.div>
               </motion.div>
             </motion.div>
           </div>
         </section>
 
         {/* Content Section */}
-        <section className="container mx-auto px-4 py-12 max-w-4xl">
+        <section ref={contentRef} className="container mx-auto px-4 py-12 max-w-4xl">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -717,17 +840,39 @@ export default function ResourceView() {
               <div className="prose prose-lg dark:prose-invert max-w-none">
                 <div className="text-muted-foreground leading-relaxed space-y-4">
                   {resource.content.split('\n').map((para, index) => {
+                    const isParagraphActive = readingParagraph === index;
+                    const paragraphClass = isParagraphActive ? "bg-primary/5 rounded-lg px-2 -mx-2 transition-colors duration-300" : "";
+
+                    // Function to render text with word highlighting
+                    const renderContent = (text: string) => {
+                      const clean = cleanMarkdown(text);
+                      if (!isParagraphActive) return clean;
+
+                      return clean.split(/\s+/).map((word, wIndex) => (
+                        <span
+                          key={wIndex}
+                          className={`transition-colors duration-200 ${isParagraphActive && highlightedWordIndex === wIndex
+                            ? "bg-primary/20 text-primary font-medium rounded px-0.5"
+                            : ""
+                            }`}
+                        >
+                          {word}{' '}
+                        </span>
+                      ));
+                    };
+
                     if (para.trim().startsWith('##')) {
                       return (
                         <motion.h2
                           key={index}
-                          className="text-2xl font-bold text-foreground mt-8 mb-4 pb-2 border-b-2 border-primary/20"
+                          id={`para-${index}`}
+                          className={`text-2xl font-bold text-foreground mt-8 mb-4 pb-2 border-b-2 border-primary/20 ${paragraphClass}`}
                           initial={{ opacity: 0, x: -20 }}
                           whileInView={{ opacity: 1, x: 0 }}
                           viewport={{ once: true }}
                           transition={{ duration: 0.5, delay: index * 0.05 }}
                         >
-                          {para.replace('##', '').trim()}
+                          {renderContent(para)}
                         </motion.h2>
                       );
                     }
@@ -735,13 +880,14 @@ export default function ResourceView() {
                       return (
                         <motion.h3
                           key={index}
-                          className="text-xl font-semibold text-foreground mt-6 mb-3"
+                          id={`para-${index}`}
+                          className={`text-xl font-semibold text-foreground mt-6 mb-3 ${paragraphClass}`}
                           initial={{ opacity: 0, x: -15 }}
                           whileInView={{ opacity: 1, x: 0 }}
                           viewport={{ once: true }}
                           transition={{ duration: 0.5, delay: index * 0.05 }}
                         >
-                          {para.replace('###', '').trim()}
+                          {renderContent(para)}
                         </motion.h3>
                       );
                     }
@@ -749,28 +895,31 @@ export default function ResourceView() {
                       return (
                         <motion.li
                           key={index}
-                          className="flex items-start gap-2 ml-4 my-2"
+                          id={`para-${index}`}
+                          className={`flex items-start gap-2 ml-4 my-2 ${paragraphClass}`}
                           initial={{ opacity: 0, x: -10 }}
                           whileInView={{ opacity: 1, x: 0 }}
                           viewport={{ once: true }}
                           transition={{ duration: 0.4, delay: index * 0.03 }}
                         >
                           <span className="text-primary mt-2">•</span>
-                          <span>{para.replace('-', '').trim()}</span>
+                          <span>{renderContent(para)}</span>
                         </motion.li>
                       );
                     }
-                    if (para.trim().startsWith('**') && para.trim().endsWith('**')) {
+                    // Handle bold lines or numbered lists that might contain bolding
+                    if ((para.trim().startsWith('**') && para.trim().endsWith('**')) || /^\d+\./.test(para.trim())) {
                       return (
                         <motion.p
                           key={index}
-                          className="font-semibold text-foreground my-4 text-lg"
+                          id={`para-${index}`}
+                          className={`font-semibold text-foreground my-4 text-lg ${paragraphClass}`}
                           initial={{ opacity: 0, scale: 0.95 }}
                           whileInView={{ opacity: 1, scale: 1 }}
                           viewport={{ once: true }}
                           transition={{ duration: 0.4, delay: index * 0.05 }}
                         >
-                          {para.replace(/\*\*/g, '').trim()}
+                          {renderContent(para)}
                         </motion.p>
                       );
                     }
@@ -778,13 +927,14 @@ export default function ResourceView() {
                       return (
                         <motion.p
                           key={index}
-                          className="my-3"
+                          id={`para-${index}`}
+                          className={`my-3 ${paragraphClass}`}
                           initial={{ opacity: 0, y: 10 }}
                           whileInView={{ opacity: 1, y: 0 }}
                           viewport={{ once: true }}
                           transition={{ duration: 0.4, delay: index * 0.02 }}
                         >
-                          {para.trim()}
+                          {renderContent(para)}
                         </motion.p>
                       );
                     }
@@ -818,11 +968,7 @@ export default function ResourceView() {
                       Find a Counselor
                     </Button>
                   </Link>
-                  <Link href="/chat">
-                    <Button>
-                      Chat with AI
-                    </Button>
-                  </Link>
+
                 </div>
               </div>
             </div>
