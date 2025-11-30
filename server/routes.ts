@@ -3,7 +3,7 @@ import { createServer, Server } from "http";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
 
-const genAI = new GoogleGenerativeAI("AIzaSyBWnwkz-eCw_GeoG2huCAAneTcmTYBxF6Y");
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
 function formatBotResponse(text: string) {
   return text
